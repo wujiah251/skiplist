@@ -5,6 +5,7 @@
 
 #include <random>
 #include <vector>
+#include <iostream>
 
 using namespace std;
 
@@ -24,15 +25,15 @@ public:
         forward = vector<Node<Key, Value> *>(level + 1, nullptr);
     }
     ~Node() {}
-    Key get_key() const
+    Key getKey() const
     {
         return key;
     }
-    Value get_value() const
+    Value getValue() const
     {
         return value;
     }
-    void set_value(Value)
+    void setValue(Value)
     {
         this->value = value;
     }
@@ -49,27 +50,35 @@ template <class Key, class Value>
 class skipList
 {
 private:
-    skipNode<Key, Value> *head, *tail;
+    Node<Key, Value> *head, *tail;
     int maxLevel;
     int nodeLevel(vector<skipNode *> p);
 
 public:
+    static Node<Key, Value> *createNode(Key, Value, int);
     skipList(int);
     ~skipList();
     // 随机获取一个层数
     int getRandomLevel();
     // 创建一个节点
-    static Node<Key, Value> *createNode(Key, Value, int);
-    int size();
+
+    int size() const
+    {
+        return size;
+    }
     // 插入
-    bool insert(Key k, Value v);
+    bool insert(const Key key, const Value value);
     // 查找
-    skipNode *find(Key k);
+    Node<Key, Value> *find(Key key);
     // 删除
-    skipNode *erase(Key k);
+    bool erase(const Key key);
+    // 打印
+    void display();
 
 private:
+    // 最大索引层数限制
     int maxLevel;
+    // 当前最大层数
     int skipListLevel;
     Node<Key, Value> *head;
     int size;
@@ -82,7 +91,7 @@ Node<Key, Value> *skipList<Key, Value>::createNode(Key k, Value va, int l)
 }
 template <class Key, class Value>
 skipList<Key, Value>::skipList(int maxLevel)
-    : maxLevel(maxLevel), size(0)
+    : maxLevel(maxLevel), size(0), skipListLevel(0)
 {
     Key k;
     Value v;
@@ -94,7 +103,6 @@ skipList<Key, Value>::~skipList()
     // 还没想好怎么析构
     delete head;
 }
-
 template <class Key, class Value>
 int skipList<Key, Value>::getRandomLevel()
 {
@@ -104,6 +112,119 @@ int skipList<Key, Value>::getRandomLevel()
         res++;
     }
     return res;
+}
+template <class Key, class Value>
+bool skipList<Key, Value>::insert(const Key key, const Value value)
+{
+    Node<Key, Value> *cur = head;
+    // update存储搜索路径，每一层的最右侧
+    // 之后插入新的节点后，update的每个节点要指向新的节点
+    vector<Node<Key, Value> *> update(maxLevel + 1, nullptr);
+
+    for (int i = skipListLevel; i >= 0; --i)
+    {
+        // 水平搜索
+        while (cur->forward[i] != nullptr && cur->forward[i]->getKey() < key)
+        {
+            cur = cur->forward[i];
+        }
+        update[i] = cur;
+    }
+    cur = cur->forward[0];
+    // 已经存在key
+    if (cur != nullptr && cur->getKey() == key)
+    {
+        return false;
+    }
+    // 插入新的结点
+    int randomLevel = getRandomLevel();
+    if (randomLevel > skipListLevel)
+    {
+        for (int i = skipListLevel + 1; i <= randomLevel; ++i)
+        {
+            // 高出的高度由头结点指向新的结点
+            update[i] = head;
+        }
+        skipListLevel = randomLevel;
+    }
+    Node<Key, Value> *insertedNode = createNode(key, value, randomLevel);
+    for (int i = 0; i <= randomLevel; ++i)
+    {
+        insertedNode->forward[i] = update[i]->forward[i];
+        update[i]->forward[i] = insertedNode;
+    }
+    ++size;
+    return true;
+}
+template <class Key, class Value>
+Node<Key, Value> *skipList<Key, Value>::find(Key key)
+{
+    Node<Key, Value> *cur = head;
+    for (int i = skipListLevel; i >= 0; --i)
+    {
+        while (cur->forward[i] != nullptr && cur->forward[i]->getKey() < key)
+        {
+            cur = cur->forward[i];
+        }
+    }
+
+    cur = cur->forward[0];
+    if (cur != nullptr && cur->getKey() == key)
+    {
+        return cur;
+    }
+    else
+        return nullptr;
+}
+template <class Key, class Value>
+bool skipList<Key, Value>::erase(const Key key)
+{
+    Node<Key, Value> *cur = head;
+    vector<Node<Key, Value> *> update(maxLevel + 1, nullptr);
+    for (int i = skipListLevel; i >= 0; --i)
+    {
+        while (cur->forward[i] != nullptr && cur->forward[i]->getKey() < key)
+        {
+            cur = cur->forward[i];
+        }
+        update[i] = cur;
+    }
+    cur = cur->forward[0];
+    if (cur != nullptr && cur->getKey() == key)
+    {
+        for (int i = 0; i <= skipListLevel; ++i)
+        {
+            if (update[i]->forward[i] != cur)
+                break;
+            update[i]->forward[i] = cur->forward[i];
+        }
+        while (skipListLevel > 0 && head->forward[skipListLevel] == nullptr)
+        {
+            --skipListLevel;
+        }
+        --size;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+template <class Key, class Value>
+void skipList<Key, Value>::display()
+{
+    std::cout << "\nSkipList:\n";
+    for (int i = 0; i <= skipListLevel; ++i)
+    {
+        Node<Key, Value> *node = head->forward[i];
+        cout << "Level" << i << ": ";
+        while (node != NULL)
+        {
+            cout << node->getKey() << ":" << node->getValue() << ";";
+            node = node->forward[i];
+        }
+        cout << endl;
+    }
 }
 
 #endif
