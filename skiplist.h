@@ -6,6 +6,8 @@
 #include <random>
 #include <vector>
 #include <iostream>
+#include <stdlib.h>
+#include <time.h>
 
 using namespace std;
 
@@ -52,11 +54,12 @@ class skipList
 private:
     Node<Key, Value> *head, *tail;
     int maxLevel;
-    int nodeLevel(vector<skipNode *> p);
+    int skipListLevel;
+    int currentElement;
 
 public:
     static Node<Key, Value> *createNode(Key, Value, int);
-    skipList(int);
+    skipList(int maxLevel = 32);
     ~skipList();
     // 随机获取一个层数
     int getRandomLevel();
@@ -64,7 +67,7 @@ public:
 
     int size() const
     {
-        return size;
+        return currentElement;
     }
     // 插入
     bool insert(const Key key, const Value value);
@@ -74,28 +77,25 @@ public:
     bool erase(const Key key);
     // 打印
     void display();
-
-private:
-    // 最大索引层数限制
-    int maxLevel;
-    // 当前最大层数
-    int skipListLevel;
-    Node<Key, Value> *head;
-    int size;
+    void displayKey();
+    void displayValue();
 };
 
 template <class Key, class Value>
-Node<Key, Value> *skipList<Key, Value>::createNode(Key k, Value va, int l)
+Node<Key, Value> *skipList<Key, Value>::createNode(Key k, Value v, int l)
 {
     Node<Key, Value> *res = new Node<Key, Value>(k, v, l);
+    return res;
 }
 template <class Key, class Value>
 skipList<Key, Value>::skipList(int maxLevel)
-    : maxLevel(maxLevel), size(0), skipListLevel(0)
+    : maxLevel(maxLevel), currentElement(0), skipListLevel(0)
 {
     Key k;
     Value v;
     head = createNode(k, v, maxLevel);
+    // 初始化随机种子
+    srand((unsigned)time(NULL));
 }
 template <class Key, class Value>
 skipList<Key, Value>::~skipList()
@@ -106,7 +106,7 @@ skipList<Key, Value>::~skipList()
 template <class Key, class Value>
 int skipList<Key, Value>::getRandomLevel()
 {
-    int res = 1;
+    int res = 0;
     while (rand() % 2 && res < maxLevel)
     {
         res++;
@@ -153,7 +153,7 @@ bool skipList<Key, Value>::insert(const Key key, const Value value)
         insertedNode->forward[i] = update[i]->forward[i];
         update[i]->forward[i] = insertedNode;
     }
-    ++size;
+    ++currentElement;
     return true;
 }
 template <class Key, class Value>
@@ -202,7 +202,7 @@ bool skipList<Key, Value>::erase(const Key key)
         {
             --skipListLevel;
         }
-        --size;
+        --currentElement;
         return true;
     }
     else
@@ -221,6 +221,38 @@ void skipList<Key, Value>::display()
         while (node != NULL)
         {
             cout << node->getKey() << ":" << node->getValue() << ";";
+            node = node->forward[i];
+        }
+        cout << endl;
+    }
+}
+template <class Key, class Value>
+void skipList<Key, Value>::displayKey()
+{
+    std::cout << "\nSkipList:\n";
+    for (int i = 0; i <= skipListLevel; ++i)
+    {
+        Node<Key, Value> *node = head->forward[i];
+        cout << "Level" << i << ": ";
+        while (node != NULL)
+        {
+            cout << node->getKey() << ";";
+            node = node->forward[i];
+        }
+        cout << endl;
+    }
+}
+template <class Key, class Value>
+void skipList<Key, Value>::displayValue()
+{
+    std::cout << "\nSkipList:\n";
+    for (int i = 0; i <= skipListLevel; ++i)
+    {
+        Node<Key, Value> *node = head->forward[i];
+        cout << "Level" << i << ": ";
+        while (node != NULL)
+        {
+            cout << node->getValue() << ";";
             node = node->forward[i];
         }
         cout << endl;
