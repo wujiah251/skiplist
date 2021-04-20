@@ -8,8 +8,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <time.h>
-
-using namespace std;
+#include <mutex>
 
 // 跳表实现k-v存储
 
@@ -24,7 +23,9 @@ public:
         this->key = k;
         this->value = v;
         this->node_level = level;
-        forward = vector<Node<Key, Value> *>(level + 1, nullptr);
+        forward = new Node *[level + 1];
+        for (int i = 0; i <= level; ++i)
+            forward[i] = nullptr;
     }
     ~Node() {}
     Key getKey() const
@@ -40,7 +41,7 @@ public:
         this->value = value;
     }
 
-    vector<Node<Key, Value> *> forward;
+    Node<Key, Value> **forward;
     int node_level;
 
 private:
@@ -56,6 +57,7 @@ private:
     int maxLevel;
     int skipListLevel;
     int currentElement;
+    std::mutex locker;
 
 public:
     static Node<Key, Value> *createNode(Key, Value, int);
@@ -100,8 +102,13 @@ skipList<Key, Value>::skipList(int maxLevel)
 template <class Key, class Value>
 skipList<Key, Value>::~skipList()
 {
-    // 还没想好怎么析构
-    delete head;
+    Node<Key, Value> *temp = head;
+    while (head)
+    {
+        temp = head->forward[0];
+        delete head;
+        head = temp;
+    }
 }
 template <class Key, class Value>
 int skipList<Key, Value>::getRandomLevel()
@@ -119,7 +126,9 @@ bool skipList<Key, Value>::insert(const Key key, const Value value)
     Node<Key, Value> *cur = head;
     // update存储搜索路径，每一层的最右侧
     // 之后插入新的节点后，update的每个节点要指向新的节点
-    vector<Node<Key, Value> *> update(maxLevel + 1, nullptr);
+    Node<Key, Value> **update = new Node<Key, Value> *[maxLevel + 1];
+    for (int i = 0; i <= maxLevel; ++i)
+        update[i] = nullptr;
 
     for (int i = skipListLevel; i >= 0; --i)
     {
@@ -180,7 +189,9 @@ template <class Key, class Value>
 bool skipList<Key, Value>::erase(const Key key)
 {
     Node<Key, Value> *cur = head;
-    vector<Node<Key, Value> *> update(maxLevel + 1, nullptr);
+    Node<Key, Value> **update = new Node<Key, Value> *[maxLevel + 1];
+    for (int i = 0; i <= maxLevel; ++i)
+        update[i] = nullptr;
     for (int i = skipListLevel; i >= 0; --i)
     {
         while (cur->forward[i] != nullptr && cur->forward[i]->getKey() < key)
@@ -217,13 +228,13 @@ void skipList<Key, Value>::display()
     for (int i = 0; i <= skipListLevel; ++i)
     {
         Node<Key, Value> *node = head->forward[i];
-        cout << "Level" << i << ": ";
+        std::cout << "Level" << i << ": ";
         while (node != NULL)
         {
-            cout << node->getKey() << ":" << node->getValue() << ";";
+            std::cout << node->getKey() << ":" << node->getValue() << ";";
             node = node->forward[i];
         }
-        cout << endl;
+        std::cout << std::endl;
     }
 }
 template <class Key, class Value>
@@ -233,13 +244,13 @@ void skipList<Key, Value>::displayKey()
     for (int i = 0; i <= skipListLevel; ++i)
     {
         Node<Key, Value> *node = head->forward[i];
-        cout << "Level" << i << ": ";
+        std::cout << "Level" << i << ": ";
         while (node != NULL)
         {
-            cout << node->getKey() << ";";
+            std::cout << node->getKey() << ";";
             node = node->forward[i];
         }
-        cout << endl;
+        std::cout << std::endl;
     }
 }
 template <class Key, class Value>
@@ -249,13 +260,13 @@ void skipList<Key, Value>::displayValue()
     for (int i = 0; i <= skipListLevel; ++i)
     {
         Node<Key, Value> *node = head->forward[i];
-        cout << "Level" << i << ": ";
+        std::cout << "Level" << i << ": ";
         while (node != NULL)
         {
-            cout << node->getValue() << ";";
+            std::cout << node->getValue() << ";";
             node = node->forward[i];
         }
-        cout << endl;
+        std::cout << std::endl;
     }
 }
 
