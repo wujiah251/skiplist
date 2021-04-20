@@ -49,39 +49,39 @@ private:
     Value value;
 };
 
-template <class Key, class Value>
-class skipList
-{
-private:
-    Node<Key, Value> *head, *tail;
-    int maxLevel;
-    int skipListLevel;
-    int currentElement;
-    std::mutex locker;
+// template <class Key, class Value>
+// class skipList
+// {
+// private:
+//     Node<Key, Value> *head, *tail;
+//     int maxLevel;
+//     int skipListLevel;
+//     int currentElement;
+//     std::mutex locker;
 
-public:
-    static Node<Key, Value> *createNode(Key, Value, int);
-    skipList(int maxLevel = 32);
-    ~skipList();
-    // 随机获取一个层数
-    int getRandomLevel();
-    // 创建一个节点
+// public:
+//     static Node<Key, Value> *createNode(Key, Value, int);
+//     skipList(int maxLevel = 32);
+//     ~skipList();
+//     // 随机获取一个层数
+//     int getRandomLevel();
+//     // 创建一个节点
 
-    int size() const
-    {
-        return currentElement;
-    }
-    // 插入
-    bool insert(const Key key, const Value value);
-    // 查找
-    Node<Key, Value> *find(Key key);
-    // 删除
-    bool erase(const Key key);
-    // 打印
-    void display();
-    void displayKey();
-    void displayValue();
-};
+//     int size() const
+//     {
+//         return currentElement;
+//     }
+//     // 插入
+//     bool insert(const Key key, const Value value);
+//     // 查找
+//     Node<Key, Value> *find(Key key);
+//     // 删除
+//     bool erase(const Key key);
+//     // 打印
+//     void display();
+//     void displayKey();
+//     void displayValue();
+// };
 
 template <class Key, class Value>
 Node<Key, Value> *skipList<Key, Value>::createNode(Key k, Value v, int l)
@@ -123,6 +123,7 @@ int skipList<Key, Value>::getRandomLevel()
 template <class Key, class Value>
 bool skipList<Key, Value>::insert(const Key key, const Value value)
 {
+    locker.lock();
     Node<Key, Value> *cur = head;
     // update存储搜索路径，每一层的最右侧
     // 之后插入新的节点后，update的每个节点要指向新的节点
@@ -143,6 +144,7 @@ bool skipList<Key, Value>::insert(const Key key, const Value value)
     // 已经存在key
     if (cur != nullptr && cur->getKey() == key)
     {
+        locker.unlock();
         return false;
     }
     // 插入新的结点
@@ -163,6 +165,7 @@ bool skipList<Key, Value>::insert(const Key key, const Value value)
         update[i]->forward[i] = insertedNode;
     }
     ++currentElement;
+    locker.unlock();
     return true;
 }
 template <class Key, class Value>
@@ -188,6 +191,7 @@ Node<Key, Value> *skipList<Key, Value>::find(Key key)
 template <class Key, class Value>
 bool skipList<Key, Value>::erase(const Key key)
 {
+    locker.lock();
     Node<Key, Value> *cur = head;
     Node<Key, Value> **update = new Node<Key, Value> *[maxLevel + 1];
     for (int i = 0; i <= maxLevel; ++i)
@@ -214,10 +218,12 @@ bool skipList<Key, Value>::erase(const Key key)
             --skipListLevel;
         }
         --currentElement;
+        locker.unlock();
         return true;
     }
     else
     {
+        locker.unlock();
         return false;
     }
 }
