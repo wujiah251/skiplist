@@ -2,28 +2,30 @@
 #include <string>
 #include <pthread.h>
 #include <chrono>
+#include <ctime>
 #include <cstdlib>
-#include <time.h>
 #include "skiplist.h"
 
+using namespace std::chrono;
 
 // 压力测试
 #define NUM_THREADS 10
 #define TEST_COUNT 1000000
 
-skipList<int, std::string> skipL(18);
+skipList<int, std::string>
+    skipL(18);
 
 void *insertThread(void *threadId)
 {
     long tid;
     tid = (long)threadId;
     int tmp = TEST_COUNT / NUM_THREADS;
-    for (int i = tid * tmp, count = 0; count < tmp; ++i)
+    for (int i = tid * tmp, count = 0; count < tmp; ++count, ++i)
     {
-        skipL.insert(rand()%TEST_COUNT,"a");
-        count++;
+        skipL.insert(i, "a");
     }
     pthread_exit(NULL);
+    return NULL;
 }
 
 void *findThread(void *threadId)
@@ -31,16 +33,22 @@ void *findThread(void *threadId)
     long tid;
     tid = (long)threadId;
     int tmp = TEST_COUNT / NUM_THREADS;
-    for(int i=tid * tmp, count = 0;count < tmp; ++i){
+    for (int i = tid * tmp, count = 0; count < tmp; ++i)
+    {
         count++;
-        skipL.find(rand()%TEST_COUNT)->getValue();
+        auto res = skipL.find(i);
+        if (res != nullptr)
+            res->getValue();
     }
     pthread_exit(NULL);
+    return NULL;
 }
 
 int main()
 {
-    time_t start = time(NULL);
+    system_clock::time_point nowStart = system_clock::now();            // 获取当前时间点
+    system_clock::duration durationStart = nowStart.time_since_epoch(); // 从1970-01-01 00:00:00到当前时间点的时长
+    time_t start = duration_cast<milliseconds>(durationStart).count();  // 将时长转换为微秒数
     pthread_t writeThreads[10];
     int r;
     for (int i = 0; i < NUM_THREADS; ++i)
@@ -53,8 +61,10 @@ int main()
         }
     }
     void *ret;
-    for(int i = 0; i< NUM_THREADS; ++i){
-        if(pthread_join(writeThreads[i], &ret)!=0){
+    for (int i = 0; i < NUM_THREADS; ++i)
+    {
+        if (pthread_join(writeThreads[i], &ret) != 0)
+        {
             perror("pthread_create() error");
             exit(3);
         }
@@ -68,15 +78,18 @@ int main()
             exit(-1);
         }
     }
-    for(int i = 0; i< NUM_THREADS; ++i){
-        if(pthread_join(readThreads[i], &ret)!=0){
+    for (int i = 0; i < NUM_THREADS; ++i)
+    {
+        if (pthread_join(readThreads[i], &ret) != 0)
+        {
             perror("pthread_create() error");
             exit(3);
         }
     }
-    std::cout << "size: " << skipL.size() << std::endl;
-    time_t end=time(NULL);
-    long Time = (long)end-(long)start;
-    std::cout << Time << std::endl;
+    system_clock::time_point nowEnd = system_clock::now();          // 获取当前时间点
+    system_clock::duration durationEnd = nowEnd.time_since_epoch(); // 从1970-01-01 00:00:00到当前时间点的时长
+    time_t end = duration_cast<milliseconds>(durationEnd).count();  // 将时长转换为微秒数
+    long Time = (long)end - (long)start;
+    std::cout << "总共花费时间：" << Time << "微秒" << std::endl;
     return 0;
 }
